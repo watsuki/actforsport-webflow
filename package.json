@@ -1,8 +1,8 @@
 {
-  "name": "titan-partners",
+  "name": "actforsport",
   "version": "1.0.0",
   "type": "module",
-  "description": "Titan Partners, Webflow project",
+  "description": "ActForSport, Webflow project",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

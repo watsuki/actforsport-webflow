@@ -1,32 +1,26 @@
+// marquee.js
+
 export function init() {
-  if (typeof gsap === 'undefined') return
+  document.querySelectorAll('.marquee_wrapper').forEach((wrapper) => {
+    const track = wrapper.querySelector('.marquee_track')
+    if (!track) return
 
-  document.querySelectorAll('.marquee').forEach((marquee) => {
-    const content = marquee.firstElementChild
-    if (!content) return
+    const duration = wrapper.getAttribute('data-duration') || '80'
+    track.style.animationDuration = duration + 's'
 
-    const original = content.innerHTML
-    content.innerHTML = original + original + original
+    const direction = wrapper.getAttribute('data-direction') || 'left'
+    if (direction === 'right') {
+      track.classList.add('is-right')
+    }
 
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
-    const isRight = marquee.dataset.direction === 'right'
-    const speed = +marquee.dataset.speed || 20
-    const unit = 100 / 3
-
-    gsap.set(content, { force3D: true, xPercent: isRight ? -unit : 0 })
-
-    const tl = gsap.to(content, {
-      xPercent: isRight ? 0 : -unit,
-      duration: speed,
-      ease: 'none',
-      repeat: -1,
-      modifiers: {
-        xPercent: gsap.utils.wrap(isRight ? -unit : 0, isRight ? 0 : -unit),
-      },
-    })
-
-    marquee.onmouseenter = () => tl.pause()
-    marquee.onmouseleave = () => tl.play()
+    const pause = wrapper.getAttribute('data-pause') || 'true'
+    if (pause === 'true') {
+      wrapper.addEventListener('mouseenter', () => {
+        track.style.animationPlayState = 'paused'
+      })
+      wrapper.addEventListener('mouseleave', () => {
+        track.style.animationPlayState = 'running'
+      })
+    }
   })
 }
