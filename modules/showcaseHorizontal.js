@@ -19,7 +19,7 @@ export function init() {
 
     ScrollTrigger.create({
       trigger: wrapper,
-      start: 'center center',
+      start: 'top top',
       end: () => '+=' + getScrollDistance(),
       pin: sticky,
       animation: tween,

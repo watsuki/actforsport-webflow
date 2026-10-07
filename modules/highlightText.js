@@ -6,7 +6,7 @@ export function init() {
   gsap.registerPlugin(ScrollTrigger, SplitText)
 
   document.querySelectorAll('[data-highlight-text]').forEach((heading) => {
-    const scrollStart = heading.getAttribute('data-highlight-scroll-start') || 'top 60%'
+    const scrollStart = heading.getAttribute('data-highlight-scroll-start') || 'top 50%'
     const scrollEnd = heading.getAttribute('data-highlight-scroll-end') || 'center 40%'
     const fadedValue = heading.getAttribute('data-highlight-fade') || 0.2
     const staggerValue = heading.getAttribute('data-highlight-stagger') || 0.1

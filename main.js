@@ -9,6 +9,9 @@ import { init as initSlider } from './modules/slider.js'
 import { init as initFooterParallax } from './modules/footerParallax.js'
 import { init as initHighlightText } from './modules/highlightText.js'
 import { init as initFlipOnScroll } from './modules/flipOnScroll.js'
+import { init as initTestimonials } from './modules/testimonials.js'
+import { init as initDepthTiles } from './modules/depthTiles.js'
+import { init as initImageTrail } from './modules/imageTrail.js'
 
 const moduleDetectors = {
   faqAccordion: { selector: '.faq_accordion', initFn: initFaqAccordion },
@@ -21,6 +24,9 @@ const moduleDetectors = {
   footerParallax: { selector: '[data-footer-parallax]', initFn: initFooterParallax },
   highlightText: { selector: '[data-highlight-text]', initFn: initHighlightText },
   flipOnScroll: { selector: "[data-flip-element='wrapper']", initFn: initFlipOnScroll },
+  testimonials: { selector: '#testimonials-slider', initFn: initTestimonials },
+  depthTiles: { selector: '[data-depth-tiles-init]', initFn: initDepthTiles },
+  imageTrail: { selector: '[data-trail="wrapper"]', initFn: initImageTrail },
 }
 
 Object.entries(moduleDetectors).forEach(([name, { selector, initFn }]) => {
