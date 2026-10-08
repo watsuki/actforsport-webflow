@@ -85,10 +85,10 @@ export function init({ onEnter } = {}) {
     const transitionWrap = document.querySelector('[data-transition-wrap]')
     const transitionPanel = transitionWrap.querySelector('[data-transition-panel]')
     const transitionLabel = transitionWrap.querySelector('[data-transition-label]')
-    const transitionLabelText = transitionWrap.querySelector('[data-transition-label-text]')
 
-    const nextPageName = next.getAttribute('data-page-name')
-    transitionLabelText.innerText = nextPageName || 'Hi there'
+    // Set the panel's color to match the incoming page before it becomes
+    // visible, so it never flashes the previous page's color.
+    applyThemeFrom(next)
 
     const tl = gsap.timeline({
       onComplete: () => { current.remove() }
@@ -265,30 +265,30 @@ export function init({ onEnter } = {}) {
   // GENERIC + HELPERS
   // -----------------------------------------
 
-  const themeConfig = {
-    light: {
-      nav: 'dark',
-      transition: 'light'
-    },
-    dark: {
-      nav: 'light',
-      transition: 'dark'
-    }
+  // Nav color only needs inverting for light/dark pages (for contrast).
+  // Other page themes (blue, pink, ...) keep the default nav look.
+  const navConfig = {
+    light: 'dark',
+    dark: 'light'
   }
 
   function applyThemeFrom(container) {
     const pageTheme = container?.dataset?.pageTheme || 'light'
-    const config = themeConfig[pageTheme] || themeConfig.light
 
     document.body.dataset.pageTheme = pageTheme
-    const transitionEl = document.querySelector('[data-theme-transition]')
-    if (transitionEl) {
-      transitionEl.dataset.themeTransition = config.transition
+
+    // Sets data-theme-transition on the panel — the custom CSS in Webflow's
+    // head targets [data-theme-transition="blue"/"pink"] (and its
+    // [data-transition-label] svg descendant) off this same element.
+    const transitionWrap = document.querySelector('[data-transition-wrap]')
+    const transitionPanel = transitionWrap?.querySelector('[data-transition-panel]')
+    if (transitionPanel) {
+      transitionPanel.dataset.themeTransition = pageTheme
     }
 
     const nav = document.querySelector('[data-theme-nav]')
     if (nav) {
-      nav.dataset.themeNav = config.nav
+      nav.dataset.themeNav = navConfig[pageTheme] || navConfig.light
     }
   }
 
