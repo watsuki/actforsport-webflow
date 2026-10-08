@@ -15,6 +15,7 @@ export function init() {
       start: 'top top',
       end: '+=100%',
       pin: true,
+      pinType: 'transform',
       pinSpacing: isLast,
       scrub: 1
     })

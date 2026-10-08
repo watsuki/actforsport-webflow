@@ -22,6 +22,7 @@ export function init() {
       start: 'top top',
       end: () => '+=' + getScrollDistance(),
       pin: sticky,
+      pinType: 'transform',
       animation: tween,
       scrub: 1,
       invalidateOnRefresh: true
