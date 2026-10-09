@@ -1,21 +1,22 @@
 // pageTransitions.js
 // gsap + CustomEase + barba.js chargés via CDN Webflow (globaux)
-// Lenis et ScrollTrigger sont optionnels (détectés automatiquement s'ils sont présents)
+// Lenis est optionnel et transmis depuis main.js (pas créé ici) ; ScrollTrigger est détecté automatiquement s'il est présent
 // Boilerplate Osmo : transitions de page gérées par barba.js
 // Transition : Page Name Wipe (Osmo Supply)
 
-export function init({ onEnter } = {}) {
+export function init({ onEnter, lenis } = {}) {
   if (typeof gsap === 'undefined' || typeof CustomEase === 'undefined' || typeof barba === 'undefined') return
 
   gsap.registerPlugin(CustomEase)
 
   history.scrollRestoration = 'manual'
 
-  let lenis = null
   let nextPage = document
   let onceFunctionsInitialized = false
 
-  const hasLenis = typeof window.Lenis !== 'undefined'
+  // Lenis is created once in main.js and passed in here — creating a second
+  // instance locally would run two conflicting rAF loops fighting over scroll.
+  const hasLenis = !!lenis
   const hasScrollTrigger = typeof window.ScrollTrigger !== 'undefined'
 
   const rmMQ = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -36,7 +37,6 @@ export function init({ onEnter } = {}) {
   // -----------------------------------------
 
   function initOnceFunctions() {
-    initLenis()
     if (onceFunctionsInitialized) return
     onceFunctionsInitialized = true
 
@@ -64,6 +64,20 @@ export function init({ onEnter } = {}) {
 
     if (hasScrollTrigger) {
       ScrollTrigger.refresh()
+
+      // Images in the new page are often still loading when the modules
+      // above measure the layout (hero reveals, pin distances, etc.), so
+      // those measurements can be wrong until they finish. main.js's
+      // window 'load' listener covers this for the very first page, but
+      // barba-swapped pages never fire a native 'load' event — refresh
+      // again once this page's own images are actually loaded.
+      const pendingImages = Array.from(next.querySelectorAll('img')).filter((img) => !img.complete)
+      if (pendingImages.length) {
+        Promise.all(pendingImages.map((img) => new Promise((resolve) => {
+          img.addEventListener('load', resolve, { once: true })
+          img.addEventListener('error', resolve, { once: true })
+        }))).then(() => ScrollTrigger.refresh())
+      }
     }
   }
 
@@ -292,29 +306,19 @@ export function init({ onEnter } = {}) {
     }
   }
 
-  function initLenis() {
-    if (lenis) return // already created
-    if (!hasLenis) return
-
-    lenis = new Lenis({
-      lerp: 0.08,
-      wheelMultiplier: 1.25,
-      autoRaf: false, // driven manually via gsap.ticker below — autoRaf would run a second, conflicting rAF loop
-    })
-
-    if (hasScrollTrigger) {
-      lenis.on('scroll', ScrollTrigger.update)
+  function resetPage(container) {
+    // window.scrollTo(0,0) directly would desync Lenis's own internal scroll
+    // state from the native position — when lenis.start() resumes right
+    // after, it can "correct" the scroll to wherever it still thinks it
+    // should be, causing a second, silent scroll jump after ScrollTriggers
+    // have already measured the page (what was making hero animations jump
+    // right after a page transition). Going through Lenis keeps both in sync.
+    if (hasLenis) {
+      lenis.scrollTo(0, { immediate: true, force: true })
+    } else {
+      window.scrollTo(0, 0)
     }
 
-    gsap.ticker.add((time) => {
-      lenis.raf(time * 1000)
-    })
-
-    gsap.ticker.lagSmoothing(0)
-  }
-
-  function resetPage(container) {
-    window.scrollTo(0, 0)
     gsap.set(container, { clearProps: 'position,top,left,right' })
 
     if (hasLenis) {

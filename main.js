@@ -1,4 +1,6 @@
 // main.js
+import Lenis from 'https://cdn.jsdelivr.net/npm/lenis@1.3.17/dist/lenis.mjs'
+
 import { init as initFaqAccordion } from './modules/faqAccordion.js'
 import { init as initShowcaseHorizontal } from './modules/showcaseHorizontal.js'
 import { init as initMarquee } from './modules/marquee.js'
@@ -12,6 +14,8 @@ import { init as initFlipOnScroll } from './modules/flipOnScroll.js'
 import { init as initTestimonials } from './modules/testimonials.js'
 import { init as initDepthTiles } from './modules/depthTiles.js'
 import { init as initImageTrail } from './modules/imageTrail.js'
+import { init as initSplitImageReveal } from './modules/splitImageReveal.js'
+// import { init as initScalingNav } from './modules/scalingNav.js' // désactivé temporairement
 import { init as initPageTransitions } from './modules/pageTransitions.js'
 
 const moduleDetectors = {
@@ -28,10 +32,29 @@ const moduleDetectors = {
   testimonials: { selector: '#testimonials-slider', initFn: initTestimonials },
   depthTiles: { selector: '[data-depth-tiles-init]', initFn: initDepthTiles },
   imageTrail: { selector: '[data-trail="wrapper"]', initFn: initImageTrail },
+  splitImageReveal: { selector: '.split_component', initFn: initSplitImageReveal },
+  // scalingNav: { selector: '[data-navigation-status]', initFn: initScalingNav }, // désactivé temporairement
 }
 
 const hasBarba =
   !!document.querySelector('[data-barba="wrapper"]') && typeof barba !== 'undefined'
+
+// -----------------------------------------
+// LENIS (créé une seule fois, importé en module ES pour être isolé
+// des variables globales que d'autres scripts, comme multi-step.js, écrasent)
+// -----------------------------------------
+let lenis = null
+try {
+  lenis = new Lenis({ autoRaf: false })
+
+  if (typeof ScrollTrigger !== 'undefined' && typeof gsap !== 'undefined') {
+    lenis.on('scroll', ScrollTrigger.update)
+    gsap.ticker.add((time) => lenis.raf(time * 1000))
+    gsap.ticker.lagSmoothing(0)
+  }
+} catch (e) {
+  console.error('[lenis]', e)
+}
 
 function initModules() {
   // Évite les doublons de triggers si les modules sont relancés
@@ -42,7 +65,8 @@ function initModules() {
   Object.entries(moduleDetectors).forEach(([name, { selector, initFn }]) => {
     if (!document.querySelector(selector)) return
     try {
-      initFn()
+      // Modules that don't care about Lenis just ignore the extra argument.
+      initFn({ lenis })
     } catch (e) {
       console.error(`[${name}]`, e)
     }
@@ -65,7 +89,7 @@ window.addEventListener('load', () => {
 // module has to be re-run manually once a new page has entered.
 if (hasBarba) {
   try {
-    initPageTransitions({ onEnter: initModules })
+    initPageTransitions({ onEnter: initModules, lenis })
   } catch (e) {
     console.error('[pageTransitions]', e)
   }
