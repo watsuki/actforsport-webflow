@@ -42,23 +42,18 @@ const hasBarba =
 // -----------------------------------------
 // LENIS (créé une seule fois, importé en module ES pour être isolé
 // des variables globales que d'autres scripts, comme multi-step.js, écrasent)
-// Uniquement sur desktop — le scroll lissé se sent souvent mou/en décalage
-// sur mobile face au scroll tactile natif, qui est déjà fluide.
 // -----------------------------------------
 let lenis = null
-const isDesktop = window.matchMedia('(min-width: 992px)').matches
-if (isDesktop) {
-  try {
-    lenis = new Lenis({ autoRaf: false })
+try {
+  lenis = new Lenis({ autoRaf: false })
 
-    if (typeof ScrollTrigger !== 'undefined' && typeof gsap !== 'undefined') {
-      lenis.on('scroll', ScrollTrigger.update)
-      gsap.ticker.add((time) => lenis.raf(time * 1000))
-      gsap.ticker.lagSmoothing(0)
-    }
-  } catch (e) {
-    console.error('[lenis]', e)
+  if (typeof ScrollTrigger !== 'undefined' && typeof gsap !== 'undefined') {
+    lenis.on('scroll', ScrollTrigger.update)
+    gsap.ticker.add((time) => lenis.raf(time * 1000))
+    gsap.ticker.lagSmoothing(0)
   }
+} catch (e) {
+  console.error('[lenis]', e)
 }
 
 function initModules() {
