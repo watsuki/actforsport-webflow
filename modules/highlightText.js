@@ -1,5 +1,9 @@
 // highlightText.js
 // gsap + ScrollTrigger + SplitText chargés via CDN Webflow (globaux)
+//
+// Le titre est déjà atténué en CSS avant le lancement du JS (style-main :
+// [data-highlight-text] { opacity: 0.2 }), pour éviter le flash du texte plein.
+// Une fois les lettres découpées et passées à 0.2, on remet le titre à 1.
 
 export function init() {
   if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined' || typeof SplitText === 'undefined') return
@@ -30,6 +34,10 @@ export function init() {
             ease: 'linear'
           })
         })
+
+        // Les lettres sont maintenant à fadedValue : on rend son opacité au titre
+        gsap.set(heading, { opacity: 1 })
+
         return ctx
       }
     })
