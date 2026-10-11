@@ -1,39 +1,45 @@
 // showcaseHorizontal.js
 // gsap + ScrollTrigger chargés via CDN Webflow (globaux)
+//
+// Desktop (≥ 992px) : section épinglée, les cartes défilent à l'horizontale au scroll.
+// Tablette / mobile : pas d'épinglage. Les cartes se font défiler au doigt
+// (scroll horizontal natif + aimantation), réglé en CSS dans style-main.
+// Sur mobile, le scroll tactile est géré par le navigateur (Lenis ne le lisse pas) :
+// un pin repositionné en JS a toujours un temps de retard, d'où les petites secousses.
+
+let mm = null
 
 export function init() {
   if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return
   gsap.registerPlugin(ScrollTrigger)
 
-  // Mobile : la barre d'adresse qui apparaît/disparaît redimensionne la fenêtre ;
-  // sans ça, chaque redimensionnement relance un refresh et fait sauter le pin.
-  ScrollTrigger.config({ ignoreMobileResize: true })
+  // Barba relance init() à chaque page : on nettoie l'instance précédente
+  if (mm) mm.revert()
+  mm = gsap.matchMedia()
 
-  document.querySelectorAll('.showcase_horizontal-wrapper').forEach((wrapper) => {
-    const sticky = wrapper.querySelector('.showcase_sticky')
-    const track = wrapper.querySelector('.showcase_track')
-    if (!sticky || !track) return
+  mm.add('(min-width: 992px)', () => {
+    document.querySelectorAll('.showcase_horizontal-wrapper').forEach((wrapper) => {
+      const sticky = wrapper.querySelector('.showcase_sticky')
+      const track = wrapper.querySelector('.showcase_track')
+      if (!sticky || !track) return
 
-    const getScrollDistance = () => Math.max(0, track.scrollWidth - sticky.clientWidth)
+      const getScrollDistance = () => Math.max(0, track.scrollWidth - sticky.clientWidth)
 
-    const tween = gsap.to(track, {
-      x: () => -getScrollDistance(),
-      ease: 'none'
-    })
+      const tween = gsap.to(track, {
+        x: () => -getScrollDistance(),
+        ease: 'none'
+      })
 
-    ScrollTrigger.create({
-      trigger: wrapper,
-      start: 'top top',
-      end: () => '+=' + getScrollDistance(),
-      pin: sticky,
-      // Pas de pinType 'transform' : sur mobile, le scroll tactile est natif
-      // (Lenis ne le lisse pas), et un pin en transform est repositionné en JS
-      // avec un temps de retard sur le scroll -> la section "saute".
-      // Le pin en position fixe (par défaut) suit le scroll sans décalage.
-      anticipatePin: 1,
-      animation: tween,
-      scrub: 1,
-      invalidateOnRefresh: true
+      ScrollTrigger.create({
+        trigger: wrapper,
+        start: 'top top',
+        end: () => '+=' + getScrollDistance(),
+        pin: sticky,
+        pinType: 'transform', // réglage d'origine, fluide sur desktop avec Lenis
+        animation: tween,
+        scrub: 1,
+        invalidateOnRefresh: true
+      })
     })
   })
 }
