@@ -9,9 +9,11 @@
 // revient à 200% que si on remonte au-dessus de la section — prête à se
 // rejouer la prochaine fois qu'on y revient par le haut. Pas de scrub.
 // Durée 1.4s + easing "Out Quart" (≈ power3.out en GSAP), comme dans Webflow.
+// Desktop uniquement (≥992px) — pas de grand-angle à 200% sur mobile/tablette.
 
 export function init() {
   if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return
+  if (!window.matchMedia('(min-width: 992px)').matches) return
   gsap.registerPlugin(ScrollTrigger)
 
   document.querySelectorAll('.split_component').forEach((component) => {
