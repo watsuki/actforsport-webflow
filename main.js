@@ -17,6 +17,7 @@ import { init as initImageTrail } from './modules/imageTrail.js'
 import { init as initSplitImageReveal } from './modules/splitImageReveal.js'
 // import { init as initScalingNav } from './modules/scalingNav.js' // désactivé temporairement
 import { init as initPageTransitions } from './modules/pageTransitions.js'
+import { initWillemLoader } from './modules/willemLoader.js'
 
 const moduleDetectors = {
   faqAccordion: { selector: '.faq_accordion', initFn: initFaqAccordion },
@@ -56,7 +57,15 @@ try {
   console.error('[lenis]', e)
 }
 
-function initModules() {
+function initModules(container) {
+  // Joue le loader au premier chargement ; sur une navigation Barba, retire
+  // simplement le .willem-header de la nouvelle page.
+  try {
+    initWillemLoader(container || document)
+  } catch (e) {
+    console.error('[willemLoader]', e)
+  }
+
   // Évite les doublons de triggers si les modules sont relancés
   if (typeof ScrollTrigger !== 'undefined') {
     ScrollTrigger.getAll().forEach((t) => t.kill(true))
