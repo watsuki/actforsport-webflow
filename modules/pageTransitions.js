@@ -319,7 +319,10 @@ export function init({ onEnter, lenis } = {}) {
       window.scrollTo(0, 0)
     }
 
-    gsap.set(container, { clearProps: 'position,top,left,right' })
+    // 'transform' aussi : l'animation d'entrée (y: 15vh -> 0) laisse un
+    // translate(0, 0) sur le container. Un transform sur un parent casse les
+    // éléments en position fixe à l'intérieur (pins ScrollTrigger compris).
+    gsap.set(container, { clearProps: 'position,top,left,right,transform' })
 
     if (hasLenis) {
       lenis.resize()
