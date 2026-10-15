@@ -7,8 +7,8 @@ const GROW = 1.2          // flex-grow de la carte survolée
 const SHRINK = 0.9        // flex-grow de l'autre carte
 const DECO_REST = { opacity: 1, scale: 1 }        // 0 pour un losange visible seulement au survol
 const DECO_HOVER = { opacity: 1, scale: 1.15 }
-const DURATION = 0.7
-const EASE = 'power2.out'
+const DURATION = 0.4
+const EASE = 'power3.out'
 
 let mm = null
 
