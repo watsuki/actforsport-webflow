@@ -13,7 +13,7 @@ export function init() {
     })
   }
 
-  new Swiper(el, {
+  const swiper = new Swiper(el, {
     loop: true,
     centeredSlides: true,
     slidesPerView: 'auto',
@@ -31,4 +31,20 @@ export function init() {
       768: { spaceBetween: 48 },
     },
   })
+
+  // L'autoplay ne tourne que lorsque la section est visible
+  swiper.autoplay.stop()
+
+  const io = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.isIntersecting) {
+        swiper.autoplay.start()
+        el.dispatchEvent(new CustomEvent('slider:enter')) // relance l'effet de lettres
+      } else {
+        swiper.autoplay.stop()
+      }
+    },
+    { threshold: 0.4 } // 40 % du slider visible
+  )
+  io.observe(el)
 }

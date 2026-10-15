@@ -43,7 +43,7 @@ export function init() {
         }
       }).to(wrapper, {
         width: '100%',
-        duration: 1.4,
+        duration: 1.8,
         ease: 'power3.out'
       })
     }
