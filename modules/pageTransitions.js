@@ -232,10 +232,14 @@ export function init({ onEnter, lenis } = {}) {
   })
 
   barba.hooks.afterEnter(data => {
-    // Run page functions
+    // 1. Webflow se rebranche sur le nouveau DOM (dropdown, menu, IX2...)
+    //    AVANT les modules, pour que ceux-ci trouvent un header fonctionnel.
+    reinitWebflow(data)
+
+    // 2. Run page functions
     initAfterEnterFunctions(data.next.container)
 
-    // Settle
+    // 3. Settle
     if (hasLenis) {
       lenis.resize()
       lenis.start()
@@ -300,10 +304,33 @@ export function init({ onEnter, lenis } = {}) {
       transitionPanel.dataset.themeTransition = pageTheme
     }
 
-    const nav = document.querySelector('[data-theme-nav]')
-    if (nav) {
+    // Le header fait partie du container Barba : pendant la transition il
+    // existe en double (ancien + nouveau). On applique le thème à tous les
+    // [data-theme-nav], sinon le nouveau header ne le reçoit jamais.
+    document.querySelectorAll('[data-theme-nav]').forEach((nav) => {
       nav.dataset.themeNav = navConfig[pageTheme] || navConfig.light
+    })
+  }
+
+  // Barba remplace le <main> (header inclus) : Webflow doit se rebrancher sur
+  // le nouveau DOM (dropdown, menu burger, tabs, formulaires, interactions).
+  function reinitWebflow(data) {
+    // data-wf-page doit pointer vers la nouvelle page (IX2, formulaires)
+    const dom = new DOMParser().parseFromString(data.next.html, 'text/html')
+    const pageId = dom.documentElement.getAttribute('data-wf-page')
+    if (pageId) document.documentElement.setAttribute('data-wf-page', pageId)
+
+    if (window.Webflow) {
+      try {
+        window.Webflow.destroy()
+        window.Webflow.ready()
+        window.Webflow.require('ix2')?.init()
+      } catch (e) {
+        console.warn('[pageTransitions] réinitialisation Webflow impossible', e)
+      }
     }
+
+    document.dispatchEvent(new Event('readystatechange'))
   }
 
   function resetPage(container) {
