@@ -6,6 +6,9 @@
 //   [data-swiper-wrap]   élément .swiper
 //   [data-swiper-prev] / [data-swiper-next]  flèches (optionnelles)
 //   .swiper-pagination   puces (optionnelles), cherchées dans le groupe
+//
+// La largeur des slides vient du CSS Webflow (slidesPerView: 'auto'),
+// pas de Swiper : c'est la classe .swiper-slide 2 qui la pilote.
 
 let instances = []
 
@@ -17,8 +20,18 @@ export function init() {
   instances = []
 
   document.querySelectorAll('[data-swiper-group]').forEach((swiperGroup) => {
-    const swiperSliderWrap = swiperGroup.querySelector('[data-swiper-wrap]')
-    if (!swiperSliderWrap) return
+    // Swiper attend un .swiper-wrapper en enfant DIRECT de l'élément qu'on lui passe.
+    // On prend donc le parent du .swiper-wrapper, que data-swiper-wrap soit posé
+    // sur le .swiper, sur le .swiper-wrapper lui-même ou sur un parent plus haut.
+    const wrapAttr = swiperGroup.querySelector('[data-swiper-wrap]')
+    const wrapperEl = wrapAttr?.classList.contains('swiper-wrapper')
+      ? wrapAttr
+      : (wrapAttr || swiperGroup).querySelector('.swiper-wrapper')
+    if (!wrapperEl) {
+      console.warn('[swiperSlider] aucun .swiper-wrapper dans ce groupe', swiperGroup)
+      return
+    }
+    const swiperSliderWrap = wrapperEl.parentElement
 
     const prevButton = swiperGroup.querySelector('[data-swiper-prev]')
     const nextButton = swiperGroup.querySelector('[data-swiper-next]')
@@ -26,16 +39,11 @@ export function init() {
     const pagination = swiperGroup.querySelector('.swiper-pagination')
 
     const swiper = new Swiper(swiperSliderWrap, {
-      slidesPerView: 1.25,
+      slidesPerView: 'auto', // largeur pilotée par le CSS (841px max, 85vw sur petit écran)
+      spaceBetween: 0,       // l'espace entre cartes vient du padding-right du slide
       speed: 600,
-      mousewheel: true,
+      mousewheel: false,
       grabCursor: true,
-      breakpoints: {
-        // >= 480px
-        480: { slidesPerView: 1.8 },
-        // >= 992px
-        992: { slidesPerView: 3.5 }
-      },
       navigation: {
         nextEl: nextButton,
         prevEl: prevButton
