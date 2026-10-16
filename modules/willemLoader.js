@@ -9,6 +9,9 @@
 // Le loader ne joue qu'au PREMIER chargement du site.
 // Sur une navigation Barba, l'appel retire simplement le .willem-header du container.
 //
+// Le loader est affiché par le CSS dès le premier paint via html.is-loading
+// (voir le script du Head) : le JS n'a plus qu'à l'animer puis le retirer.
+//
 // gsap + CustomEase chargés via CDN Webflow (globaux)
 //
 // Utilisation :
@@ -16,6 +19,9 @@
 //   await initWillemLoader(container)   // renvoie une Promise résolue à la fin
 
 let hasRun = false
+
+const root = document.documentElement
+const endLoading = () => root.classList.remove('is-loading')
 
 // Bloque le scroll pendant le loader (Lenis est déjà actif au premier chargement).
 const blockScroll = (e) => { e.preventDefault(); e.stopImmediatePropagation() }
@@ -42,13 +48,17 @@ export function initWillemLoader(scope = document) {
   hasRun = true
 
   // Navigation Barba (ou page sans loader) : on retire le loader, rien d'autre.
-  if (!container) return Promise.resolve()
+  if (!container) {
+    endLoading()
+    return Promise.resolve()
+  }
   if (
     !firstCall ||
     typeof gsap === 'undefined' ||
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
   ) {
     container.remove()
+    endLoading()
     return Promise.resolve()
   }
 
@@ -80,10 +90,11 @@ export function initWillemLoader(scope = document) {
   lockScroll()
 
   return new Promise((resolve) => {
-    const tl = gsap.timeline({
-      defaults: { ease: 'expo.inOut' },
-      onStart: () => container.classList.remove('is--hidden'),
-    })
+    // Le loader est déjà visible grâce à html.is-loading ; on retire is--hidden
+    // par sécurité si la classe traîne encore dans le markup.
+    container.classList.remove('is--hidden')
+
+    const tl = gsap.timeline({ defaults: { ease: 'expo.inOut' } })
 
     // 1. Lettres "act" / "forsport"
     if (loadingLetter.length) {
@@ -132,6 +143,7 @@ export function initWillemLoader(scope = document) {
 
     // Fin : on rend le scroll et on recalcule les positions ScrollTrigger
     tl.call(() => {
+      endLoading()
       unlockScroll()
       if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh()
       window.__loaderComplete = true
