@@ -16,6 +16,7 @@ import { init as initDepthTiles } from './modules/depthTiles.js'
 import { init as initImageTrail } from './modules/imageTrail.js'
 import { init as initSplitImageReveal } from './modules/splitImageReveal.js'
 import { init as initPathsHover } from './modules/pathsHover.js'
+import { init as initSwiperSlider } from './modules/swiperSlider.js'
 // import { init as initScalingNav } from './modules/scalingNav.js' // désactivé temporairement
 import { init as initPageTransitions } from './modules/pageTransitions.js'
 import { initWillemLoader } from './modules/willemLoader.js'
@@ -36,6 +37,7 @@ const moduleDetectors = {
   imageTrail: { selector: '[data-trail="wrapper"]', initFn: initImageTrail },
   splitImageReveal: { selector: '.split_component', initFn: initSplitImageReveal },
   pathsHover: { selector: '[data-paths-hover]', initFn: initPathsHover },
+  swiperSlider: { selector: '[data-swiper-group]', initFn: initSwiperSlider },
   // scalingNav: { selector: '[data-navigation-status]', initFn: initScalingNav }, // désactivé temporairement
 }
 
