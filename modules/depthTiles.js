@@ -1,16 +1,18 @@
 // depthTiles.js
-// gsap + ScrollTrigger + CustomEase chargés via CDN Webflow (globaux)
+// gsap chargé via CDN Webflow (global)
+//
+// Carrousel en profondeur piloté au drag (souris ou doigt), sans défilement automatique.
+// Au relâchement, la carte la plus proche se cale au centre ; un geste rapide
+// (« flick ») passe à la carte suivante même si le drag est court.
 
 export function init() {
-  if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined' || typeof CustomEase === 'undefined') return
-  gsap.registerPlugin(CustomEase, ScrollTrigger)
-  CustomEase.create('depth', 'M0,0 C0.6,0 0,1 1,1')
+  if (typeof gsap === 'undefined') return
 
   document.querySelectorAll('[data-depth-tiles-init]').forEach((container) => {
     const list = container.querySelector('[data-depth-tiles-list]')
     const tiles = container.querySelectorAll('[data-depth-tiles-item]')
     const tileCount = tiles.length
-    if (tileCount < 2) return
+    if (!list || tileCount < 2) return
 
     const xMultiplier = 0.65
     const backScale = 0.5
@@ -19,21 +21,30 @@ export function init() {
     const sideRotateY = 5
     const perspective = 75
 
-    const moveDuration = 1.5
-    const startDelay = 0.5
-    const pauseDuration = 0.125
+    const dragThreshold = 6     // px avant de considérer qu'on drague (sinon c'est un clic)
+    const flickProjection = 200 // ms : élan projeté au relâchement
+    const snapDuration = 0.8
+    const snapEase = 'power3.out'
 
     const state = { progress: 0 }
 
-    let isActive = false
-    let isHovering = false
-    let hasStarted = false
-    let stepTimeline
-    let delayedCall
-    let startDelayedCall
     let activeTileIndex = -1
+    let snapTween = null
+    let pointerId = null
+    let dragging = false
+    let justDragged = false
+    let startX = 0
+    let startProgress = 0
+    let lastX = 0
+    let lastT = 0
+    let velocity = 0 // px / ms
 
-    gsap.set(list, { perspective: `${perspective}em` })
+    gsap.set(list, {
+      perspective: `${perspective}em`,
+      cursor: 'grab',
+      touchAction: 'pan-y', // le scroll vertical reste natif sur mobile
+      userSelect: 'none'
+    })
     gsap.set(tiles, {
       transformStyle: 'preserve-3d',
       transformPerspective: perspective * 16
@@ -49,6 +60,12 @@ export function init() {
       return ((Math.round(state.progress) % tileCount) + tileCount) % tileCount
     }
 
+    // Distance de drag (px) pour avancer d'une carte : celle qui amène une carte
+    // latérale au centre.
+    function getStepDistance() {
+      return Math.max(1, tiles[0].offsetWidth * xMultiplier)
+    }
+
     function updateTileStatus() {
       const currentActiveIndex = getActiveIndex()
       if (currentActiveIndex === activeTileIndex) return
@@ -61,8 +78,7 @@ export function init() {
     }
 
     function renderDepth() {
-      const tileWidth = tiles[0].offsetWidth
-      const radiusX = tileWidth * xMultiplier
+      const radiusX = getStepDistance()
 
       updateTileStatus()
 
@@ -91,90 +107,86 @@ export function init() {
       })
     }
 
-    function goToNextTile() {
-      if (!isActive || isHovering) return
+    // Cale la carte la plus proche au centre, en tenant compte de l'élan du geste
+    function snap() {
+      const nearest = Math.round(state.progress)
+      const projected = state.progress - (velocity * flickProjection) / getStepDistance()
+      const target = gsap.utils.clamp(nearest - 1, nearest + 1, Math.round(projected))
 
-      stepTimeline = gsap.timeline({
-        paused: true,
-        onComplete: () => {
-          if (isActive && !isHovering) {
-            delayedCall = gsap.delayedCall(pauseDuration, goToNextTile)
-          }
-        }
-      })
-
-      stepTimeline.to(state, {
-        progress: state.progress + 1,
-        duration: moveDuration,
-        ease: 'depth',
+      snapTween = gsap.to(state, {
+        progress: target,
+        duration: snapDuration,
+        ease: snapEase,
         onUpdate: renderDepth
       })
-
-      stepTimeline.play()
     }
 
-    function pauseDepth() {
-      isActive = false
-      if (stepTimeline) stepTimeline.pause()
-      if (delayedCall) delayedCall.pause()
-      if (startDelayedCall) startDelayedCall.pause()
-    }
-
-    function playDepth() {
-      isActive = true
-      if (isHovering) return
-
-      if (!hasStarted) {
-        hasStarted = true
-        startDelayedCall = gsap.delayedCall(startDelay, goToNextTile)
-        return
-      }
-
-      if (stepTimeline && stepTimeline.progress() < 1) {
-        stepTimeline.play()
-      } else {
-        goToNextTile()
-      }
-    }
-
-    function handleHoverStart() {
-      isHovering = true
-      if (delayedCall) delayedCall.pause()
-      if (startDelayedCall) startDelayedCall.pause()
-    }
-
-    function handleHoverEnd() {
-      isHovering = false
-      if (!isActive) return
-
-      if (!hasStarted) {
-        playDepth()
-        return
-      }
-
-      if (stepTimeline && stepTimeline.progress() < 1) {
-        stepTimeline.play()
-      } else {
-        goToNextTile()
-      }
-    }
-
-    list.addEventListener('pointerover', (event) => {
-      if (!event.target.closest('[data-depth-tiles-item]')) return
-      handleHoverStart()
+    list.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      pointerId = e.pointerId
+      dragging = false
+      velocity = 0
+      startX = lastX = e.clientX
+      lastT = e.timeStamp
+      // Attrape les cartes en plein mouvement
+      if (snapTween) snapTween.kill()
     })
 
-    list.addEventListener('pointerleave', () => {
-      handleHoverEnd()
+    list.addEventListener('pointermove', (e) => {
+      if (e.pointerId !== pointerId) return
+
+      if (!dragging) {
+        if (Math.abs(e.clientX - startX) < dragThreshold) return
+        dragging = true
+        startX = e.clientX
+        startProgress = state.progress
+        list.setPointerCapture(pointerId)
+        list.style.cursor = 'grabbing'
+      }
+
+      const dt = e.timeStamp - lastT
+      if (dt > 0) velocity = (e.clientX - lastX) / dt
+      lastX = e.clientX
+      lastT = e.timeStamp
+
+      // Glisser vers la gauche fait venir la carte de droite
+      state.progress = startProgress - (e.clientX - startX) / getStepDistance()
+      renderDepth()
     })
+
+    const endDrag = (e) => {
+      if (e.pointerId !== pointerId) return
+      pointerId = null
+
+      if (dragging) {
+        dragging = false
+        list.style.cursor = 'grab'
+        if (list.hasPointerCapture(e.pointerId)) list.releasePointerCapture(e.pointerId)
+        // Un geste arrêté avant de relâcher n'a plus d'élan
+        if (e.timeStamp - lastT > 100) velocity = 0
+        // Bloque le clic qui suit le relâchement (liens dans les cartes)
+        justDragged = true
+        setTimeout(() => { justDragged = false }, 0)
+      }
+
+      snap()
+    }
+
+    list.addEventListener('pointerup', endDrag)
+    list.addEventListener('pointercancel', endDrag)
+
+    list.addEventListener('click', (e) => {
+      if (!justDragged) return
+      e.preventDefault()
+      e.stopPropagation()
+    }, true)
+
+    // Empêche le glisser natif des images / liens du navigateur
+    list.addEventListener('dragstart', (e) => e.preventDefault())
+
+    // La largeur des cartes change avec la fenêtre : on recalcule les positions
+    new ResizeObserver(renderDepth).observe(tiles[0])
 
     renderDepth()
-
-    ScrollTrigger.create({
-      trigger: container,
-      start: 'top bottom',
-      end: 'bottom top',
-      onToggle: (self) => (self.isActive ? playDepth() : pauseDepth())
-    })
   })
 }
