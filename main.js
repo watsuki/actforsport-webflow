@@ -2,7 +2,6 @@
 import Lenis from 'https://cdn.jsdelivr.net/npm/lenis@1.3.17/dist/lenis.mjs'
 
 import { init as initFaqAccordion } from './modules/faqAccordion.js'
-import { init as initShowcaseHorizontal } from './modules/showcaseHorizontal.js'
 import { init as initMarquee } from './modules/marquee.js'
 import { init as initSplitText } from './modules/splitText.js'
 import { init as initCardsStack } from './modules/cardsStack.js'
@@ -17,13 +16,14 @@ import { init as initImageTrail } from './modules/imageTrail.js'
 import { init as initSplitImageReveal } from './modules/splitImageReveal.js'
 import { init as initPathsHover } from './modules/pathsHover.js'
 import { init as initSwiperSlider } from './modules/swiperSlider.js'
+import { init as initHeaderTheme } from './modules/headerTheme.js'
+import { init as initHamburgerNav } from './modules/hamburgerNav.js'
 // import { init as initScalingNav } from './modules/scalingNav.js' // désactivé temporairement
 import { init as initPageTransitions } from './modules/pageTransitions.js'
 import { initWillemLoader } from './modules/willemLoader.js'
 
 const moduleDetectors = {
   faqAccordion: { selector: '.faq_accordion', initFn: initFaqAccordion },
-  showcaseHorizontal: { selector: '.showcase_horizontal-wrapper', initFn: initShowcaseHorizontal },
   marquee: { selector: '.marquee_wrapper', initFn: initMarquee },
   splitText: { selector: '[animate]', initFn: initSplitText },
   cardsStack: { selector: '.feature-item', initFn: initCardsStack },
@@ -38,6 +38,10 @@ const moduleDetectors = {
   splitImageReveal: { selector: '.split_component', initFn: initSplitImageReveal },
   pathsHover: { selector: '[data-paths-hover]', initFn: initPathsHover },
   swiperSlider: { selector: '[data-swiper-group]', initFn: initSwiperSlider },
+  // Détecté sur le logo (pas sur les sections) : init() remet aussi le header à zéro
+  // sur les pages sans section blanche.
+  headerTheme: { selector: '[data-logo="main"]', initFn: initHeaderTheme },
+  hamburgerNav: { selector: '[data-navigation-status]', initFn: initHamburgerNav },
   // scalingNav: { selector: '[data-navigation-status]', initFn: initScalingNav }, // désactivé temporairement
 }
 
@@ -92,7 +96,6 @@ if (!hasBarba) {
   initModules()
 }
 
-// Some triggers (e.g. showcaseHorizontal's pin distance) are measured from
 // element widths that depend on images, so refresh once everything is loaded.
 window.addEventListener('load', () => {
   if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh()
