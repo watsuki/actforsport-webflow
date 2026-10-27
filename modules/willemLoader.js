@@ -84,8 +84,14 @@ export function initWillemLoader(scope = document) {
   // Contenu de la page sous le loader (pour l'effet d'inertie).
   // On anime les sections et pas le container Barba : un transform sur le
   // container déplacerait aussi le loader, qui est en position fixe dedans.
+  // La barre de scroll (data-scroll-header) est exclue : elle gère son propre
+  // transform et ne doit jamais bouger avec cet effet d'inertie.
   const pageContent = Array.from(container.parentElement.children)
-    .filter((el) => el !== container)
+    .filter((el) => (
+      el !== container &&
+      !el.matches('[data-scroll-header]') &&
+      !el.querySelector('[data-scroll-header]')
+    ))
 
   lockScroll()
 

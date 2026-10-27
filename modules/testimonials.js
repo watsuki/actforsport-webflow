@@ -21,6 +21,9 @@ export function init() {
     grabCursor: true,
     slideToClickedSlide: true,
     speed: 600,
+    // Swipe trackpad (deltaX) : fait glisser le slider, sans jamais intercepter
+    // le scroll vertical normal de la page (forceToAxis limite à l'axe horizontal).
+    mousewheel: { forceToAxis: true },
     autoplay: {
       delay: 5000,
       disableOnInteraction: false, // reprend l'autoplay après un clic ou un drag

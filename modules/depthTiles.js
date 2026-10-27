@@ -38,6 +38,9 @@ export function init() {
     let lastX = 0
     let lastT = 0
     let velocity = 0 // px / ms
+    let hovering = false // survol du carrousel : active les flèches sans clic préalable
+    let wheelTimeout = null
+    let wheelLastT = 0
 
     gsap.set(list, {
       perspective: `${perspective}em`,
@@ -121,6 +124,23 @@ export function init() {
       })
     }
 
+    // Centre une carte précise (clic sur une carte en second plan), en choisissant
+    // le sens le plus court autour du cercle.
+    function goToTile(index) {
+      if (snapTween) snapTween.kill()
+
+      let delta = index - state.progress
+      delta = (((delta + tileCount / 2) % tileCount + tileCount) % tileCount) - tileCount / 2
+      const target = state.progress + delta
+
+      snapTween = gsap.to(state, {
+        progress: target,
+        duration: snapDuration,
+        ease: snapEase,
+        onUpdate: renderDepth
+      })
+    }
+
     list.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'mouse' && e.button !== 0) return
       pointerId = e.pointerId
@@ -175,11 +195,53 @@ export function init() {
     list.addEventListener('pointerup', endDrag)
     list.addEventListener('pointercancel', endDrag)
 
+    // Swipe trackpad (deltaX) : fait glisser le carrousel comme un drag, en
+    // bloquant le scroll vertical de la page tant que le geste est surtout horizontal.
+    list.addEventListener('wheel', (e) => {
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
+      e.preventDefault()
+
+      if (snapTween) snapTween.kill()
+      clearTimeout(wheelTimeout)
+
+      const dt = e.timeStamp - wheelLastT
+      wheelLastT = e.timeStamp
+      if (dt > 0 && dt < 200) velocity = -(e.deltaX / dt)
+
+      state.progress += e.deltaX / getStepDistance()
+      renderDepth()
+
+      // Pas d'événement de "relâchement" sur un wheel : on cale la carte
+      // la plus proche une fois le geste terminé (silence de ~120ms).
+      wheelTimeout = setTimeout(snap, 120)
+    }, { passive: false })
+
+    container.addEventListener('pointerenter', () => { hovering = true })
+    container.addEventListener('pointerleave', () => { hovering = false })
+
+    window.addEventListener('keydown', (e) => {
+      if (!hovering) return
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+      e.preventDefault()
+      goToTile(activeTileIndex + (e.key === 'ArrowRight' ? 1 : -1))
+    })
+
     list.addEventListener('click', (e) => {
       if (!justDragged) return
       e.preventDefault()
       e.stopPropagation()
     }, true)
+
+    // Les cartes en second plan sont partiellement (ou totalement) masquées :
+    // un clic sur l'une d'elles la centre au lieu de suivre un éventuel lien.
+    tiles.forEach((tile, index) => {
+      tile.addEventListener('click', (e) => {
+        if (index === activeTileIndex) return
+        e.preventDefault()
+        e.stopPropagation()
+        goToTile(index)
+      }, true)
+    })
 
     // Empêche le glisser natif des images / liens du navigateur
     list.addEventListener('dragstart', (e) => e.preventDefault())

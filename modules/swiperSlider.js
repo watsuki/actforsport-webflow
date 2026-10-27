@@ -42,7 +42,9 @@ export function init() {
       slidesPerView: 'auto', // largeur pilotée par le CSS (841px max, 85vw sur petit écran)
       spaceBetween: 0,       // l'espace entre cartes vient du padding-right du slide
       speed: 600,
-      mousewheel: false,
+      // Swipe trackpad (deltaX) : fait glisser le slider, sans jamais intercepter
+      // le scroll vertical normal de la page (forceToAxis limite à l'axe horizontal).
+      mousewheel: { forceToAxis: true },
       grabCursor: true,
       navigation: {
         nextEl: nextButton,
