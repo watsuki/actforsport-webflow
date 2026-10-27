@@ -30,7 +30,7 @@ export function init() {
       pauseOnMouseEnter: true,     // pause au survol, pratique pour lire
     },
     breakpoints: {
-      0: { spaceBetween: 24 },
+      0: { spaceBetween: 24, autoplay: false }, // pas de défilement auto sur mobile
       768: { spaceBetween: 48 },
     },
   })
