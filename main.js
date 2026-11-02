@@ -101,6 +101,21 @@ window.addEventListener('load', () => {
   if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh()
 })
 
+// Un formulaire Webflow (.w-form) cache le <form> et affiche le message de
+// succès/erreur en changeant leur style inline : la page change de hauteur,
+// ce qui rend obsolètes les positions déjà mesurées par ScrollTrigger pour
+// tout ce qui suit (ex. le parallax du footer). On les remesure à chaque fois.
+new MutationObserver((mutations) => {
+  const touchedForm = mutations.some((m) => m.target.closest?.('.w-form'))
+  if (touchedForm && typeof ScrollTrigger !== 'undefined') {
+    requestAnimationFrame(() => ScrollTrigger.refresh())
+  }
+}).observe(document.body, {
+  attributes: true,
+  attributeFilter: ['style'],
+  subtree: true
+})
+
 // Barba swaps the page content without reloading main.js, so every other
 // module has to be re-run manually once a new page has entered.
 if (hasBarba) {

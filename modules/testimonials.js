@@ -42,7 +42,8 @@ export function init() {
     ([entry]) => {
       if (entry.isIntersecting) {
         swiper.autoplay.start()
-        el.dispatchEvent(new CustomEvent('slider:enter')) // relance l'effet de lettres
+        // Effet de lettres à l'arrivée sur la section : desktop/tablet seulement
+        if (window.innerWidth >= 768) el.dispatchEvent(new CustomEvent('slider:enter'))
       } else {
         swiper.autoplay.stop()
       }
