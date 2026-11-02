@@ -101,6 +101,19 @@ window.addEventListener('load', () => {
   if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh()
 })
 
+// Les images en loading="lazy" ne sont récupérées que près du viewport : elles
+// finissent souvent de charger bien après 'load', et changent la hauteur de la
+// page une fois affichées. Ça rend obsolètes des positions déjà mesurées par
+// ScrollTrigger (ex. la fin du parallax du footer, qui ne remonte alors plus
+// tout à fait en haut). 'load' sur une <img> ne bubble pas : on écoute en
+// phase de capture sur document pour l'attraper quelle que soit l'image.
+let imageRefreshTimeout = null
+document.addEventListener('load', (e) => {
+  if (e.target.tagName !== 'IMG' || typeof ScrollTrigger === 'undefined') return
+  clearTimeout(imageRefreshTimeout)
+  imageRefreshTimeout = setTimeout(() => ScrollTrigger.refresh(), 100)
+}, true)
+
 // Un formulaire Webflow (.w-form) cache le <form> et affiche le message de
 // succès/erreur en changeant leur style inline : la page change de hauteur,
 // ce qui rend obsolètes les positions déjà mesurées par ScrollTrigger pour
