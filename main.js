@@ -65,6 +65,36 @@ try {
   console.error('[lenis]', e)
 }
 
+// Remesure Lenis (limite de scroll) PUIS ScrollTrigger. Rafraîchir seulement
+// ScrollTrigger ne suffit pas : Lenis continuerait de bloquer le scroll à
+// l'ancienne hauteur de page.
+function refreshScroll() {
+  lenis?.resize()
+  if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh()
+}
+
+let lastPageHeight = 0
+let heightRefreshTimeout = null
+const contentObserver =
+  typeof ResizeObserver !== 'undefined'
+    ? new ResizeObserver(() => {
+        const h = document.documentElement.scrollHeight
+        if (h === lastPageHeight) return
+        lastPageHeight = h
+        clearTimeout(heightRefreshTimeout)
+        heightRefreshTimeout = setTimeout(refreshScroll, 150)
+      })
+    : null
+
+function observeContent(container) {
+  if (!contentObserver) return
+  contentObserver.disconnect()
+  const root = container || document
+  root
+    .querySelectorAll('.main-wrapper > *, .page-wrapper > *, [data-footer-parallax]')
+    .forEach((el) => contentObserver.observe(el))
+}
+
 function initModules(container) {
   // Joue le loader au premier chargement ; sur une navigation Barba, retire
   // simplement le .willem-header de la nouvelle page.
@@ -78,6 +108,9 @@ function initModules(container) {
   if (typeof ScrollTrigger !== 'undefined') {
     ScrollTrigger.getAll().forEach((t) => t.kill(true))
   }
+
+  // (Re)branche l'observation de hauteur sur le contenu de la page courante
+  observeContent(document)
 
   Object.entries(moduleDetectors).forEach(([name, { selector, initFn }]) => {
     if (!document.querySelector(selector)) return
@@ -97,9 +130,7 @@ if (!hasBarba) {
 }
 
 // element widths that depend on images, so refresh once everything is loaded.
-window.addEventListener('load', () => {
-  if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh()
-})
+window.addEventListener('load', refreshScroll)
 
 // Les images en loading="lazy" ne sont récupérées que près du viewport : elles
 // finissent souvent de charger bien après 'load', et changent la hauteur de la
@@ -111,7 +142,7 @@ let imageRefreshTimeout = null
 document.addEventListener('load', (e) => {
   if (e.target.tagName !== 'IMG' || typeof ScrollTrigger === 'undefined') return
   clearTimeout(imageRefreshTimeout)
-  imageRefreshTimeout = setTimeout(() => ScrollTrigger.refresh(), 100)
+  imageRefreshTimeout = setTimeout(refreshScroll, 100)
 }, true)
 
 // Filet de sécurité général : dès que la hauteur de la page change, quelle
@@ -120,26 +151,18 @@ document.addEventListener('load', (e) => {
 // ScrollTrigger. Si la page RACCOURCIT après la mesure, la fin du parallax du
 // footer ('clamp(top top)') reste calée sur l'ancienne hauteur : on n'atteint
 // jamais la fin du scroll et le footer ne remonte pas jusqu'en haut.
-let lastPageHeight = 0
-let heightRefreshTimeout = null
-if (typeof ResizeObserver !== 'undefined') {
-  new ResizeObserver(() => {
-    const h = document.documentElement.scrollHeight
-    if (h === lastPageHeight || typeof ScrollTrigger === 'undefined') return
-    lastPageHeight = h
-    clearTimeout(heightRefreshTimeout)
-    heightRefreshTimeout = setTimeout(() => {
-      lenis?.resize()
-      ScrollTrigger.refresh()
-    }, 150)
-  }).observe(document.body)
-}
+//
+// ATTENTION : html, body, .page-wrapper et .main-wrapper sont à height: 100%
+// (= hauteur du viewport). Leur boîte ne change JAMAIS de taille, donc observer
+// document.body ne déclenche rien, et l'autoResize interne de Lenis non plus :
+// Lenis garde son ancienne limite de scroll et bloque avant la vraie fin de
+// page (ex. logo du footer en lazy qui ajoute ~190px). On observe donc les
+// enfants directs du contenu, qui eux grandissent réellement.
+
 
 // Première visite (lien partagé = cache vide) : les polices arrivent tard et
 // changent la hauteur des gros titres.
-document.fonts?.ready.then(() => {
-  if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh()
-})
+document.fonts?.ready.then(refreshScroll)
 
 // Un formulaire Webflow (.w-form) cache le <form> et affiche le message de
 // succès/erreur en changeant leur style inline : la page change de hauteur,
@@ -147,9 +170,7 @@ document.fonts?.ready.then(() => {
 // tout ce qui suit (ex. le parallax du footer). On les remesure à chaque fois.
 new MutationObserver((mutations) => {
   const touchedForm = mutations.some((m) => m.target.closest?.('.w-form'))
-  if (touchedForm && typeof ScrollTrigger !== 'undefined') {
-    requestAnimationFrame(() => ScrollTrigger.refresh())
-  }
+  if (touchedForm) requestAnimationFrame(refreshScroll)
 }).observe(document.body, {
   attributes: true,
   attributeFilter: ['style'],
