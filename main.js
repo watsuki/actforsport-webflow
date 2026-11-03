@@ -114,6 +114,33 @@ document.addEventListener('load', (e) => {
   imageRefreshTimeout = setTimeout(() => ScrollTrigger.refresh(), 100)
 }, true)
 
+// Filet de sécurité général : dès que la hauteur de la page change, quelle
+// qu'en soit la cause (polices qui arrivent après coup sur une première visite,
+// Weglot, Finsweet List, iframes, accordéons...), on remesure Lenis et
+// ScrollTrigger. Si la page RACCOURCIT après la mesure, la fin du parallax du
+// footer ('clamp(top top)') reste calée sur l'ancienne hauteur : on n'atteint
+// jamais la fin du scroll et le footer ne remonte pas jusqu'en haut.
+let lastPageHeight = 0
+let heightRefreshTimeout = null
+if (typeof ResizeObserver !== 'undefined') {
+  new ResizeObserver(() => {
+    const h = document.documentElement.scrollHeight
+    if (h === lastPageHeight || typeof ScrollTrigger === 'undefined') return
+    lastPageHeight = h
+    clearTimeout(heightRefreshTimeout)
+    heightRefreshTimeout = setTimeout(() => {
+      lenis?.resize()
+      ScrollTrigger.refresh()
+    }, 150)
+  }).observe(document.body)
+}
+
+// Première visite (lien partagé = cache vide) : les polices arrivent tard et
+// changent la hauteur des gros titres.
+document.fonts?.ready.then(() => {
+  if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh()
+})
+
 // Un formulaire Webflow (.w-form) cache le <form> et affiche le message de
 // succès/erreur en changeant leur style inline : la page change de hauteur,
 // ce qui rend obsolètes les positions déjà mesurées par ScrollTrigger pour
