@@ -68,21 +68,29 @@ try {
 // Remesure Lenis (limite de scroll) PUIS ScrollTrigger. Rafraîchir seulement
 // ScrollTrigger ne suffit pas : Lenis continuerait de bloquer le scroll à
 // l'ancienne hauteur de page.
+//
+// Point d'entrée UNIQUE pour tous les recalculs (images, ResizeObserver,
+// polices, formulaires...) : les appels rapprochés sont regroupés en un seul,
+// et on attend que le scroll Lenis soit arrêté. Un ScrollTrigger.refresh() en
+// plein défilement fait accrocher le scroll et casse son élan.
+let refreshTimeout = null
 function refreshScroll() {
-  lenis?.resize()
-  if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh()
+  clearTimeout(refreshTimeout)
+  refreshTimeout = setTimeout(() => {
+    if (lenis?.isScrolling) return refreshScroll() // on attend la fin du scroll
+    lenis?.resize()
+    if (typeof ScrollTrigger !== 'undefined') ScrollTrigger.refresh()
+  }, 200)
 }
 
 let lastPageHeight = 0
-let heightRefreshTimeout = null
 const contentObserver =
   typeof ResizeObserver !== 'undefined'
     ? new ResizeObserver(() => {
         const h = document.documentElement.scrollHeight
         if (h === lastPageHeight) return
         lastPageHeight = h
-        clearTimeout(heightRefreshTimeout)
-        heightRefreshTimeout = setTimeout(refreshScroll, 150)
+        refreshScroll()
       })
     : null
 
@@ -138,11 +146,11 @@ window.addEventListener('load', refreshScroll)
 // ScrollTrigger (ex. la fin du parallax du footer, qui ne remonte alors plus
 // tout à fait en haut). 'load' sur une <img> ne bubble pas : on écoute en
 // phase de capture sur document pour l'attraper quelle que soit l'image.
-let imageRefreshTimeout = null
+// Couvre aussi les pages chargées par Barba (pas besoin d'un 2e écouteur
+// dans pageTransitions.js).
 document.addEventListener('load', (e) => {
-  if (e.target.tagName !== 'IMG' || typeof ScrollTrigger === 'undefined') return
-  clearTimeout(imageRefreshTimeout)
-  imageRefreshTimeout = setTimeout(refreshScroll, 100)
+  if (e.target.tagName !== 'IMG') return
+  refreshScroll()
 }, true)
 
 // Filet de sécurité général : dès que la hauteur de la page change, quelle
@@ -170,7 +178,7 @@ document.fonts?.ready.then(refreshScroll)
 // tout ce qui suit (ex. le parallax du footer). On les remesure à chaque fois.
 new MutationObserver((mutations) => {
   const touchedForm = mutations.some((m) => m.target.closest?.('.w-form'))
-  if (touchedForm) requestAnimationFrame(refreshScroll)
+  if (touchedForm) refreshScroll()
 }).observe(document.body, {
   attributes: true,
   attributeFilter: ['style'],
