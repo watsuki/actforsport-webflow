@@ -330,7 +330,54 @@ export function init({ onEnter, lenis } = {}) {
       }
     }
 
+    // Formulaires protégés par Turnstile : Webflow ne recrée pas le captcha
+    // après une navigation Barba, et laisse le bouton d'envoi désactivé
+    // (disabled + .w-form-loading) en attendant un jeton qui n'arrive jamais.
+    initTurnstile(data.next.container)
+
     document.dispatchEvent(new Event('readystatechange'))
+  }
+
+  function initTurnstile(container) {
+    const forms = Array.from(
+      (container || document).querySelectorAll('.w-form form[data-turnstile-sitekey]')
+    ).filter((form) => !form.closest('.form-loader')) // formulaire caché du footer
+    if (!forms.length) return
+
+    const render = () => {
+      forms.forEach((form) => {
+        if (form.querySelector('.cf-turnstile-barba')) return
+        const sitekey = form.dataset.turnstileSitekey
+
+        // Webflow lit la clé dans les données jQuery du formulaire
+        if (window.jQuery) window.jQuery.data(form, 'turnstileSitekey', sitekey)
+
+        const box = document.createElement('div')
+        box.className = 'cf-turnstile-barba'
+        form.appendChild(box)
+
+        window.turnstile.render(box, {
+          sitekey,
+          size: 'invisible',
+          // Jeton reçu : on réactive le bouton comme le ferait Webflow
+          callback: () => {
+            form.querySelectorAll('[type="submit"]').forEach((btn) => {
+              btn.disabled = false
+              btn.classList.remove('w-form-loading')
+            })
+          }
+        })
+      })
+    }
+
+    if (window.turnstile) return render()
+
+    // Page de départ sans formulaire : le script Turnstile n'est pas chargé
+    const script = document.createElement('script')
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
+    script.async = true
+    script.onload = render
+    document.head.appendChild(script)
   }
 
   function resetPage(container) {
